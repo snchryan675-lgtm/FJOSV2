@@ -1,0 +1,9 @@
+{
+  "name": "fjos-web",
+  "version": "1.0.0",
+  "description": "FJOS in the browser, with a built-in web proxy",
+  "main": "server.js",
+  "scripts": { "start": "node server.js" },
+  "engines": { "node": ">=18" },
+  "dependencies": { "js-dos": "^8.5.0" }
+}

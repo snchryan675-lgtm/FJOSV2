@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"><title>FJOS</title>
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval' blob:; connect-src 'self' blob: data:; worker-src 'self' blob:; font-src 'self' data:; frame-src *; img-src 'self' * data: blob: file:; media-src 'self' file: blob:">
+<style>
+:root{--bg:#0d1420;--pan:#141c2b;--pan2:#1c2638;--line:#2a3750;--acc:#3aa0e0;--acc2:#7cc6f2;--text:#e9eef7;--dim:#8d9ab3}
+*{box-sizing:border-box;margin:0}
+html,body{height:100%;overflow:hidden;font:14px "Segoe UI",system-ui,sans-serif;color:var(--text);background:var(--bg) center/cover no-repeat}
+button,input,select{font:inherit;color:inherit}
+#dock{position:fixed;left:50%;bottom:14px;transform:translateX(-50%);display:flex;align-items:center;gap:4px;padding:6px 10px;border-radius:22px;background:var(--pan);border:1px solid var(--line);box-shadow:0 10px 40px #0008;z-index:99999;backdrop-filter:blur(14px)}
+#dock button{position:relative;width:42px;height:42px;border:0;border-radius:14px;background:transparent;cursor:pointer;font-size:20px;display:grid;place-items:center;transition:transform .12s,background .12s}
+#dock button:hover{background:var(--pan2)}
+#dock button.open::after{content:"";position:absolute;bottom:2px;width:5px;height:5px;border-radius:50%;background:var(--acc)}
+#dock img{width:30px;height:30px;object-fit:contain;border-radius:8px}.lk i img{width:46px;height:46px;object-fit:contain}#dock .sep{width:1px;height:26px;background:var(--line);margin:0 4px}#clock{color:var(--dim);font-size:12px;padding:0 6px}
+.win{position:fixed;left:var(--wl);top:var(--wt);width:var(--ww);height:var(--wh);background:var(--pan);border:1px solid var(--line);border-radius:14px;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 20px 60px #0009}
+.win.small{left:15vw;top:10vh;width:70vw;height:70vh}
+.tt{height:32px;display:flex;align-items:center;padding:0 6px 0 14px;gap:8px;background:var(--bg);cursor:move;flex:none;font-size:12px;color:var(--dim)}
+.tt b{flex:1;font-weight:600}.tt button{width:30px;height:22px;border:0;border-radius:6px;background:transparent;cursor:pointer;color:var(--dim)}
+.tt button:hover{background:var(--pan2);color:var(--text)}.tt .x:hover{background:#e5484d;color:#fff}
+.body{flex:1;display:flex;min-height:0;position:relative}.col{flex-direction:column}
+.tabs{display:flex;gap:4px;padding:6px 8px 0;background:var(--bg);flex:none;overflow:auto}
+.tab{display:flex;gap:8px;align-items:center;padding:7px 12px;border-radius:10px 10px 0 0;background:transparent;cursor:pointer;max-width:200px;min-width:90px;font-size:12px}
+.tab span{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.tab.on{background:var(--pan)}.tab:hover{background:var(--pan2)}
+.tab b{opacity:.6}.tabs .add{border:0;background:transparent;font-size:18px;cursor:pointer;padding:0 10px;color:var(--dim)}
+.tool{display:flex;gap:6px;padding:6px 8px;background:var(--pan);border-bottom:1px solid var(--line);flex:none;align-items:center}
+.tool button,.tool select,.btn{background:var(--pan2);border:1px solid var(--line);border-radius:8px;padding:6px 11px;cursor:pointer}
+.tool button:hover,.btn:hover{border-color:var(--acc)}
+.tool input,.field{flex:1;background:var(--bg);border:1px solid var(--line);border-radius:999px;padding:7px 14px;outline:none}
+.field{border-radius:8px;width:100%;flex:none}.tool input:focus,.field:focus{border-color:var(--acc)}
+.pages{flex:1;display:flex;position:relative;min-height:0}webview{flex:1;background:#fff}
+.home{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:22px;background:#0006;backdrop-filter:blur(6px)}
+.home h1{font-size:64px;font-weight:300;letter-spacing:-2px}
+.home .sb{width:min(560px,80%);display:flex;gap:8px}
+.home .sb input{flex:1;background:var(--pan);border:1px solid var(--line);border-radius:999px;padding:13px 20px;font-size:16px;outline:none}
+.home .sb input:focus{border-color:var(--acc)}
+.links{display:flex;gap:14px;flex-wrap:wrap;justify-content:center}
+.lk{width:84px;display:flex;flex-direction:column;align-items:center;gap:6px;font-size:12px;cursor:pointer;padding:8px;border-radius:12px}.lk:hover{background:var(--pan)}
+.lk i{width:46px;height:46px;border-radius:14px;display:grid;place-items:center;font-style:normal;font-size:22px;color:#fff}
+.side{width:200px;background:var(--bg);padding:14px 10px;display:flex;flex-direction:column;gap:2px;flex:none}
+.side button{text-align:left;border:0;background:transparent;padding:9px 14px;border-radius:8px;cursor:pointer;color:var(--dim)}
+.side button:hover{background:var(--pan2)}.side button.on{background:var(--pan2);color:var(--text);box-shadow:inset 3px 0 var(--acc)}
+.set{flex:1;overflow:auto;padding:22px 26px}.set h2{font-weight:600;margin-bottom:16px}.set p{color:var(--dim);margin:6px 0 12px;line-height:1.5}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px}
+.card{border-radius:12px;padding:0;cursor:pointer;border:2px solid transparent;overflow:hidden}.card.on{border-color:#fff8}
+.card .h{padding:9px 12px;font-weight:600;font-size:13px}.card .r{display:flex;gap:8px;padding:10px 12px}.card .r div{height:26px;border-radius:7px;flex:1}
+.card .d{display:flex;gap:5px;padding:0 12px 12px}.card .d span{width:10px;height:10px;border-radius:50%}
+.wall{height:110px;border-radius:12px;background:center/cover;cursor:pointer;border:2px solid transparent;display:flex;align-items:flex-end;padding:8px;font-size:12px;font-weight:600;text-shadow:0 1px 4px #000}.wall.on{border-color:#fff}
+.row2{display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid var(--line)}
+.files{flex:1;overflow:auto;padding:6px}.row{display:grid;grid-template-columns:28px 1fr 90px;padding:8px;border-radius:8px;align-items:center;user-select:none}
+.row:hover{background:var(--pan2)}.row.sel{background:var(--pan2);box-shadow:inset 3px 0 var(--acc)}.row i{font-style:normal}.row small{color:var(--dim);text-align:right}
+.empty{color:var(--dim);padding:40px;text-align:center;line-height:1.7}
+#launcher{position:fixed;inset:0;background:#000a;backdrop-filter:blur(10px);display:none;z-index:99998;align-items:center;justify-content:center;padding-bottom:70px}
+#launcher .links{max-width:640px;gap:22px}#launcher .lk{width:100px;color:#fff}
+#toast{position:fixed;right:20px;bottom:84px;background:var(--pan2);border:1px solid var(--acc);border-radius:12px;padding:12px 16px;cursor:pointer;z-index:999999;box-shadow:0 10px 30px #0008}
+#menu{position:fixed;background:var(--pan2);border:1px solid var(--line);border-radius:10px;padding:4px;display:none;z-index:999999;min-width:170px}
+#menu div{padding:8px 12px;border-radius:6px;cursor:pointer}#menu div:hover{background:var(--pan)}
+body{--wl:3vw;--wt:2.5vh;--ww:94vw;--wh:calc(100vh - 92px);--dl:0px;--dt:0px}
+body[data-dock=top]{--wt:84px;--wh:calc(100vh - 84px - 2.5vh);--dt:76px}
+body[data-dock=left]{--wl:84px;--ww:calc(100vw - 84px - 3vw);--wh:95vh;--dl:76px}
+body[data-dock=right]{--ww:calc(100vw - 84px - 3vw);--wh:95vh}
+body[data-dock=top] #dock{bottom:auto;top:14px}
+body[data-dock=left] #dock,body[data-dock=right] #dock{top:50%;bottom:auto;transform:translateY(-50%);flex-direction:column;padding:10px 6px}
+body[data-dock=left] #dock{left:14px}body[data-dock=right] #dock{left:auto;right:14px}
+body[data-dock=left] #dock .sep,body[data-dock=right] #dock .sep{width:26px;height:1px;margin:4px 0}
+body[data-dock=top] #dock button.open::after{bottom:auto;top:2px}
+body[data-dock=left] #dock button.open::after{bottom:auto;left:1px}
+body[data-dock=right] #dock button.open::after{bottom:auto;right:1px}
+#desk{position:fixed;inset:0;z-index:1;pointer-events:none}
+.di{position:absolute;pointer-events:auto;width:84px;height:92px;display:flex;flex-direction:column;align-items:center;gap:4px;padding:6px 4px;border-radius:8px;color:#fff;font-size:12px;text-align:center;text-shadow:0 1px 3px #000;user-select:none;transition:background .15s,transform .15s,left .12s,top .12s}
+.di:hover{background:#ffffff1f;transform:translateY(-2px) scale(1.06)}.di.sel{background:#ffffff33;outline:1px solid #ffffff55}
+.di i{font-style:normal;width:48px;height:48px;border-radius:12px;display:grid;place-items:center;font-size:26px}.di img{width:48px;height:48px;object-fit:contain}
+#bgv{position:fixed;inset:0;width:100%;height:100%;object-fit:cover;z-index:0;display:none}
+#launcher .links{align-content:center}#launcher .lh{width:100%;color:#fff9;font-size:12px;letter-spacing:.6px;text-transform:uppercase;text-align:left;margin-top:8px}
+.term{flex:1;display:flex;flex-direction:column;background:#0b0e14;color:#c9d1d9;font:13px Consolas,monospace;padding:10px;min-height:0}.term .out{flex:1;overflow:auto;white-space:pre-wrap}.term .ln{display:flex;gap:8px;align-items:center;padding-top:6px}.term input{flex:1;background:transparent;border:0;outline:0;color:#fff;font:inherit}.term .ln span{color:var(--acc2)}
+.cside{width:230px;background:var(--pan);border-right:1px solid var(--line);display:flex;flex-direction:column;flex:none;min-height:0}.ch{display:flex;justify-content:space-between;align-items:center;padding:8px 10px;font-size:11px;color:var(--dim)}.ch button{border:0;background:transparent;color:var(--dim);cursor:pointer;font-size:14px;padding:0 4px}.ch button:hover{color:var(--text)}
+.ctree{flex:1;overflow:auto;font-size:13px}.ct{padding:3px 8px;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;user-select:none}.ct:hover{background:var(--pan2)}.ct.on{background:var(--pan2);box-shadow:inset 2px 0 var(--acc)}
+.cmain{flex:1;display:flex;flex-direction:column;min-width:0;min-height:0;background:var(--bg)}.ctabs{display:flex;overflow:auto;background:var(--pan);flex:none}.ctab{padding:7px 12px;font-size:12px;cursor:pointer;display:flex;gap:8px;align-items:center;white-space:nowrap;color:var(--dim);border-right:1px solid var(--line)}.ctab.on{background:var(--bg);color:var(--text);box-shadow:inset 0 2px var(--acc)}
+.cbar{display:flex;gap:8px;align-items:center;padding:4px 10px;font-size:12px;color:var(--dim);flex:none}.cbar .btn{padding:3px 10px}.cedit{flex:1;display:flex;min-height:0}.gut{width:48px;padding:10px 6px 10px 0;text-align:right;color:var(--dim);font:13px/20px Consolas,monospace;overflow:hidden;white-space:pre;user-select:none;flex:none}
+.cedit textarea{flex:1;background:transparent;border:0;outline:0;resize:none;color:var(--text);font:13px/20px Consolas,monospace;padding:10px;tab-size:2;white-space:pre;overflow:auto}.cstat{display:flex;justify-content:space-between;padding:3px 12px;font-size:11px;background:var(--acc);color:#000c;flex:none}
+.cext{flex:1;padding:14px;font-size:13px;overflow:auto}.cext .ex{padding:12px;border:1px solid var(--line);border-radius:8px;margin-bottom:10px}.cext small{color:var(--dim)}
+</style><style id="polish">
+:root{color-scheme:dark;--glass:color-mix(in srgb,var(--pan) 82%,transparent);--hair:rgba(255,255,255,.09)}
+html,body{font-family:"Segoe UI Variable Text","Segoe UI",Inter,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+::selection{background:color-mix(in srgb,var(--acc) 55%,transparent)}
+*::-webkit-scrollbar{width:12px;height:12px}*::-webkit-scrollbar-track{background:transparent}
+*::-webkit-scrollbar-thumb{background:rgba(255,255,255,.16);border-radius:10px;border:3px solid transparent;background-clip:padding-box}*::-webkit-scrollbar-thumb:hover{background:rgba(255,255,255,.3);background-clip:padding-box}
+#dock{border-radius:26px;background:var(--glass);border:1px solid var(--hair);box-shadow:0 18px 50px rgba(0,0,0,.45),inset 0 1px 0 rgba(255,255,255,.08);backdrop-filter:blur(26px) saturate(150%);padding:7px 12px;gap:6px}
+#dock button{border-radius:15px}#dock button:hover{background:rgba(255,255,255,.1)}
+#dock img{filter:drop-shadow(0 3px 5px rgba(0,0,0,.35))}
+#dock button.open::after{background:var(--acc2);box-shadow:0 0 8px var(--acc)}#dock .sep{background:var(--hair)}
+.win{border-radius:16px;background:color-mix(in srgb,var(--pan) 90%,transparent);border:1px solid var(--hair);box-shadow:0 30px 80px rgba(0,0,0,.55),0 0 0 .5px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.07);backdrop-filter:blur(24px) saturate(140%)}
+.tt{height:38px;padding:0 14px;gap:8px;font-size:12.5px;background:linear-gradient(rgba(255,255,255,.05),transparent),color-mix(in srgb,var(--bg) 70%,transparent);border-bottom:1px solid var(--hair)}
+.tt b{order:5;flex:1;text-align:center;font-weight:600;color:var(--text);opacity:.85;padding-right:58px}
+.tt button{order:4;width:13px;height:13px;border-radius:50%;padding:0;font-size:0;line-height:13px;color:rgba(0,0,0,.6);transition:filter .15s}
+.tt .x{order:1;background:#ff5f57}.tt .mi{order:2;background:#febc2e}.tt .m{order:3;background:#28c840}
+.tt:hover button{font-size:9px}.tt button:hover{filter:brightness(1.15);color:rgba(0,0,0,.7)}
+.tt .x:hover{background:#ff5f57}.tt .mi:hover{background:#febc2e}.tt .m:hover{background:#28c840}
+.tabs{background:color-mix(in srgb,var(--bg) 60%,transparent);padding:8px 10px 0;gap:6px}
+.tab{padding:8px 14px;color:var(--dim);transition:background .15s}.tab.on{background:var(--pan);color:var(--text)}
+.tool{background:var(--pan);border-bottom:1px solid var(--hair);padding:8px 10px}
+.tool button,.tool select,.btn{background:rgba(255,255,255,.06);border:1px solid var(--hair);border-radius:10px;padding:7px 13px;transition:all .15s}
+.tool button:hover,.btn:hover{background:rgba(255,255,255,.11);border-color:color-mix(in srgb,var(--acc) 70%,transparent);box-shadow:0 0 0 3px color-mix(in srgb,var(--acc) 18%,transparent)}
+.tool button:active,.btn:active{transform:scale(.97)}
+.tool input,.field{background:rgba(0,0,0,.28);border:1px solid var(--hair);padding:8px 16px}
+.tool input:focus,.field:focus{border-color:var(--acc);box-shadow:0 0 0 3px color-mix(in srgb,var(--acc) 22%,transparent)}
+.home{background:radial-gradient(900px 500px at 50% 35%,rgba(255,255,255,.07),transparent),rgba(0,0,0,.38);backdrop-filter:blur(14px)}
+.home h1{font-size:84px;font-weight:200;letter-spacing:-3px;text-shadow:0 6px 40px rgba(0,0,0,.4)}
+.home .sb input{background:var(--glass);border:1px solid var(--hair);backdrop-filter:blur(20px);padding:15px 24px;box-shadow:0 10px 30px rgba(0,0,0,.3)}
+.lk{border-radius:16px;transition:transform .18s,background .18s}.lk:hover{background:rgba(255,255,255,.1);transform:translateY(-4px)}
+.lk i{border-radius:16px;box-shadow:0 8px 20px rgba(0,0,0,.35)}.lk i:has(img){box-shadow:none}
+.side{width:210px;background:color-mix(in srgb,var(--bg) 55%,transparent);border-right:1px solid var(--hair);padding:18px 12px;gap:3px}
+.side button{padding:10px 14px;border-radius:10px;transition:all .15s}.side button:hover{background:rgba(255,255,255,.07);color:var(--text)}
+.side button.on{background:color-mix(in srgb,var(--acc) 22%,transparent);color:var(--text);box-shadow:none}
+.set{padding:28px 34px}.set h2{font-size:22px;font-weight:600;margin-bottom:20px;letter-spacing:-.3px}
+.row2{background:rgba(255,255,255,.04);border:1px solid var(--hair);border-radius:14px;padding:14px 18px;margin-bottom:10px}
+.grid{gap:18px;grid-template-columns:repeat(auto-fill,minmax(240px,1fr))}
+.card{border-radius:16px;border:1.5px solid var(--hair);transition:transform .18s,border-color .18s,box-shadow .18s;box-shadow:0 8px 24px rgba(0,0,0,.28)}
+.card:hover{transform:translateY(-3px);border-color:rgba(255,255,255,.28)}
+.card.on{border-color:rgba(255,255,255,.9);box-shadow:0 0 0 4px rgba(255,255,255,.12),0 14px 34px rgba(0,0,0,.45)}
+.card .h{padding:11px 16px;font-size:14px;border-bottom:1px solid rgba(255,255,255,.06)}
+.card .r{padding:14px 16px;gap:10px}.card .r div{height:30px;border-radius:10px;box-shadow:inset 0 1px 0 rgba(255,255,255,.12)}
+.card .d{padding:0 16px 16px;gap:8px}.card .d span{width:11px;height:11px}
+.wall{border-radius:16px;height:130px;transition:transform .18s,border-color .18s,box-shadow .18s;box-shadow:0 8px 24px rgba(0,0,0,.3)}.wall:hover{transform:translateY(-3px)}.wall.on{box-shadow:0 0 0 4px rgba(255,255,255,.14),0 14px 34px rgba(0,0,0,.45)}
+select.btn{appearance:none;padding-right:28px;background-image:linear-gradient(45deg,transparent 50%,var(--dim) 50%),linear-gradient(135deg,var(--dim) 50%,transparent 50%);background-position:calc(100% - 15px) 52%,calc(100% - 10px) 52%;background-size:5px 5px;background-repeat:no-repeat}
+input[type=checkbox]{appearance:none;width:42px;height:24px;border-radius:999px;background:rgba(255,255,255,.16);position:relative;cursor:pointer;transition:background .2s;flex:none}
+input[type=checkbox]::after{content:"";position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:50%;background:#fff;transition:transform .2s;box-shadow:0 2px 6px rgba(0,0,0,.35)}
+input[type=checkbox]:checked{background:var(--acc)}input[type=checkbox]:checked::after{transform:translateX(18px)}
+.row{border-radius:10px;padding:9px 12px}.row:hover{background:rgba(255,255,255,.07)}.row.sel{background:color-mix(in srgb,var(--acc) 22%,transparent);box-shadow:none}
+.empty h2{color:var(--text);margin-bottom:8px}
+#menu{background:var(--glass);backdrop-filter:blur(24px);border:1px solid var(--hair);border-radius:12px;padding:6px;box-shadow:0 18px 50px rgba(0,0,0,.5)}
+#menu div{border-radius:8px;padding:8px 12px}#menu div:hover{background:color-mix(in srgb,var(--acc) 35%,transparent)}
+#toast{background:var(--glass);backdrop-filter:blur(24px);border:1px solid var(--hair);border-radius:14px;box-shadow:0 18px 50px rgba(0,0,0,.5)}
+#launcher{background:radial-gradient(900px 600px at 50% 40%,rgba(0,0,0,.25),rgba(0,0,0,.72));backdrop-filter:blur(30px) saturate(130%)}
+#launcher .lk{border-radius:18px}#launcher .lk:hover{background:rgba(255,255,255,.12);transform:scale(1.08)}
+.di{border-radius:12px;font-weight:500;text-shadow:0 1px 3px rgba(0,0,0,.85),0 0 10px rgba(0,0,0,.45)}
+.di i,.di img{filter:drop-shadow(0 6px 10px rgba(0,0,0,.4))}
+.di:hover{background:rgba(255,255,255,.13)}.di.sel{background:rgba(255,255,255,.22);outline:1px solid rgba(255,255,255,.35)}
+</style></head><body>
+<div id="launcher"><div class="links" id="lgrid"></div></div>
+<video id="bgv" autoplay loop muted playsinline></video><div id="desk"></div><div id="dock"></div><div id="menu"></div>
+<script src="shim.js"></script>
+<script>
+const $=(s,r=document)=>r.querySelector(s);
+const el=(h,p)=>{const d=document.createElement('div');d.innerHTML=h;const n=d.firstElementChild;p&&p.append(n);return n};
+// ---------- settings ----------
+const THEMES=[['Emerald',150],['Eucalyptus',168],['Aqua',182],['Glacier',198],['Azure',210],['Indigo veil',232],['Violet',258],['Amethyst smoke',282,28],['Plum velvet',304],['Fuchsia',324],['Rose',346],['Ember',14],['Amber',38],['Moss',92,45]].map(([n,h,s])=>({n,h,s:s||65}));
+function mtn(c){
+ const defs=`<linearGradient id='g' x1='0' y1='0' x2='0' y2='1'><stop offset='0' stop-color='${c[0]}'/><stop offset='1' stop-color='${c[1]}'/></linearGradient><radialGradient id='s'><stop offset='0' stop-color='${c[2]}' stop-opacity='.85'/><stop offset='.4' stop-color='${c[2]}' stop-opacity='.22'/><stop offset='1' stop-color='${c[2]}' stop-opacity='0'/></radialGradient><linearGradient id='f' x1='0' y1='0' x2='0' y2='1'><stop offset='0' stop-color='${c[1]}' stop-opacity='0'/><stop offset='1' stop-color='${c[1]}' stop-opacity='.9'/></linearGradient>`;
+ let s=`<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1600 900' preserveAspectRatio='xMidYMid slice'><defs>${defs}</defs><rect width='1600' height='900' fill='url(#g)'/><circle cx='1040' cy='300' r='360' fill='url(#s)'/><circle cx='1040' cy='300' r='72' fill='${c[2]}'/>`,fig='';
+ for(let i=0;i<4;i++){
+  const y=400+i*112;let sd=i*13+5,d=`M-60 900L-60 ${y}`,peak=[0,9e9];
+  for(let x=-60;x<=1660;x+=60){sd=(sd*9301+49297)%233280;const py=y-(sd/233280)*(230-i*45)-(x%120?0:18);d+=`L${x} ${py.toFixed(0)}`;if(i===3&&x>1180&&x<1420&&py<peak[1])peak=[x,py]}
+  s+=`<path d='${d}L1660 900Z' fill='${c[3+i]}'/><rect x='0' y='${y-200}' width='1600' height='${900-(y-200)}' fill='url(#f)' opacity='${(.62-i*.15).toFixed(2)}'/>`;
+  if(i===3&&peak[1]<9e8)fig=`<g transform='translate(${peak[0]} ${peak[1].toFixed(0)}) scale(2.2)' fill='${c[6]}'><circle cx='0' cy='-24' r='3.2'/><path d='M-6 1L-2 -20Q0 -22 2 -20L6 1Z'/></g>`;
+ }
+ return 'data:image/svg+xml;utf8,'+encodeURIComponent(s+fig+'</svg>')}
+const WALLS={'Misty mountains':mtn(['#d9d6cf','#eeece6','#fff','#c4c4c4','#9da0a4','#6d7279','#3b4149']),'Dusk peaks':mtn(['#3a2a5e','#c77b8a','#ffd9a8','#6b4a7d','#4c3768','#33254f','#1c1633']),'Jade valley':mtn(['#bfe3d0','#eaf6ee','#fffbe8','#8fbfa6','#5f9a84','#3b7264','#1d4540']),'Midnight':mtn(['#050a18','#16264a','#dfe8ff','#1d2f57','#15244a','#0d1835','#060d20'])};
+let S={dock:'bottom',theme:'Azure',wall:'Misty mountains',custom:null,engine:'DuckDuckGo',h24:false,proxy:''};
+try{Object.assign(S,JSON.parse(localStorage.getItem('fjos.s')||'{}'))}catch{}
+const save=()=>{try{localStorage.setItem('fjos.s',JSON.stringify(S))}catch{alert('Custom image is too large to save. Pick a smaller one.')}};
+function apply(){const t=THEMES.find(x=>x.n===S.theme)||THEMES[4],r=document.documentElement.style,h=t.h,s=t.s;
+ r.setProperty('--acc',`hsl(${h} ${s}% 56%)`);r.setProperty('--acc2',`hsl(${h} ${s}% 74%)`);r.setProperty('--bg',`hsl(${h} 28% 8%)`);r.setProperty('--pan',`hsl(${h} 24% 13%)`);r.setProperty('--pan2',`hsl(${h} 22% 19%)`);r.setProperty('--line',`hsl(${h} 20% 27%)`);
+ vid();document.body.dataset.dock=S.dock||'bottom';document.body.style.backgroundImage=`url("${S.wall==='Custom'&&S.custom?S.custom:WALLS[S.wall]||WALLS['Misty mountains']}")`}
+const bgv=$('#bgv');function vid(){const on=S.wall==='Video'&&S.video;if(on){if(bgv.dataset.u!==S.video){bgv.src=S.video;bgv.dataset.u=S.video}bgv.style.display='block';bgv.play().catch(()=>{})}else{bgv.style.display='none';bgv.pause()}}
+apply();if(S.proxy)fjos.setProxy(S.proxy);
+const ENGINES={Bing:['https://www.bing.com','https://www.bing.com/search?q='],DuckDuckGo:['https://duckduckgo.com','https://duckduckgo.com/?q='],Google:['https://www.google.com','https://www.google.com/search?q=']};
+const toUrl=v=>{v=v.trim();return /^https?:\/\//i.test(v)?v:/^[\w-]+(\.[\w-]+)+(\/\S*)?$/.test(v)?'https://'+v:ENGINES[S.engine][1]+encodeURIComponent(v)};
+// ---------- apps + dock ----------
+const APPS=[
+ {id:'browser',i:'browser.png',name:'Browser',g:'🌐',c:'#2d6cdf',kind:'browser'},
+ {id:'discord',i:'discord.png',name:'Discord',g:'💬',c:'#5865f2',kind:'web',url:'https://discord.com/app'},
+ {id:'claude',i:'claude.png',name:'Claude',g:'✻',c:'#c96442',kind:'web',url:'https://claude.ai'},
+ {id:'chatai',i:'chatai.png',name:'ChatAI',g:'◎',c:'#10a37f',kind:'web',url:'https://chatgpt.com'},
+ {id:'xbox',i:'xbox.png',name:'Xbox',g:'🎮',c:'#107c10',kind:'web',url:'https://www.xbox.com/play'},
+ {id:'files',name:'Files',g:'📁',c:'#c99a2e',kind:'files',path:''},
+ {id:'games',i:'games.png',name:'Games',g:'🕹',c:'#7b4fd6',kind:'web',url:'games/index.html'},
+ {id:'programs',name:'Programs',g:'⚙',c:'#4a5878',kind:'files',path:'Programs'},
+ {id:'code',name:'VS Code',g:'⟨/⟩',c:'#0078d4',kind:'code'},
+ {id:'terminal',name:'Terminal',g:'>_',c:'#14171d',kind:'term'},
+ {id:'settings',i:'settings.png',name:'Settings',g:'✦',c:'#556',kind:'settings'}];
+const DOCK=['browser','discord','claude','chatai','xbox','roblox','steam','files'];
+const gl=a=>a.i?`<img src="icons/${a.i}" alt="">`:a.g;
+const byId=Object.fromEntries(APPS.map(a=>[a.id,a]));const open={};let z=10;
+const dock=$('#dock');
+const SC=()=>S.sc||(S.sc=[]);
+const scApp=sc=>({id:'sc:'+sc.rel,name:sc.name,g:'▶',c:'#3a4a6b',kind:'sc',rel:sc.rel,sc});
+const allApps=()=>[...APPS,...SC().map(scApp)];
+const find=id=>allApps().find(a=>a.id===id);
+const run=a=>a.kind==='sc'?fjos.open(a.rel):launch(a);
+function focusApp(a){const o=Object.values(open).filter(o=>o.app===a.id).pop();if(!o)return run(a);const hid=o.el.style.display==='none';o.el.style.display='';o.el.style.zIndex=++z;if(hid)genie(o.el,a.id,'open')}
+function dockBtn(a){const b=el(`<button title="${a.name}" data-id="${a.id}">${gl(a)}</button>`,dock);b.onclick=()=>focusApp(a)}
+let clk;const tick=()=>clk&&(clk.textContent=new Date().toLocaleTimeString([],{hour:S.h24?'2-digit':'numeric',minute:'2-digit',hour12:!S.h24}));setInterval(tick,1000);
+function renderDock(){dock.innerHTML='';const pin=(S.dockApps||DOCK).map(find).filter(Boolean),ids=new Set(pin.map(a=>a.id));
+ pin.forEach(dockBtn);Object.values(open).forEach(o=>{if(!ids.has(o.a.id)&&o.a.id!=='settings'){ids.add(o.a.id);dockBtn(o.a)}});
+ el('<div class="sep"></div>',dock);
+ const gb=el('<button title="Start menu"><svg viewBox="0 0 24 24" width="22" height="22"><g fill="var(--acc2)"><rect x="2" y="2" width="9.5" height="9.5" rx="1.5"/><rect x="12.5" y="2" width="9.5" height="9.5" rx="1.5"/><rect x="2" y="12.5" width="9.5" height="9.5" rx="1.5"/><rect x="12.5" y="12.5" width="9.5" height="9.5" rx="1.5"/></g></svg></button>',dock);
+ gb.onclick=e=>{e.stopPropagation();const l=$('#launcher');l.style.display=l.style.display==='flex'?'none':'flex'};
+ dockBtn(byId.settings);clk=el('<span id="clock"></span>',dock);tick();mark()}
+function renderLauncher(){const g=$('#lgrid');g.innerHTML='';
+ const tiles=(list)=>list.forEach(a=>{const t=el(`<div class="lk"><i style="background:${a.i?'none':a.c}">${gl(a)}</i>${a.name}</div>`,g);t.onclick=()=>{$('#launcher').style.display='none';run(a)};t.oncontextmenu=e=>{e.preventDefault();e.stopPropagation();appMenu(e,a)}});
+ const pin=(S.pinStart||[]).map(find).filter(Boolean);
+ if(pin.length){el('<div class="lh">Pinned</div>',g);tiles(pin)}
+ el('<div class="lh">All apps</div>',g);tiles(allApps())}
+function appMenu(e,a){const m=$('#menu');m.innerHTML='';
+ const add=(t,f)=>{el(`<div>${t}</div>`,m).onclick=()=>{m.style.display='none';f()}};
+ const has=(k,d)=>(S[k]||d).includes(a.id),tog=(k,d)=>{const Z=[...(S[k]||d)],i=Z.indexOf(a.id);i<0?Z.push(a.id):Z.splice(i,1);S[k]=Z;save();renderDock();renderLauncher()};
+ add('Open',()=>run(a));
+ add(has('pinStart',[])?'Unpin from Start menu':'Pin to Start menu',()=>tog('pinStart',[]));
+ if(a.id!=='settings')add(has('dockApps',DOCK)?'Unpin from taskbar':'Pin to taskbar',()=>tog('dockApps',DOCK));
+ if(a.sc)add('Remove from desktop',()=>{S.sc=SC().filter(x=>x!==a.sc);['pinStart','dockApps'].forEach(k=>S[k]&&(S[k]=S[k].filter(i=>i!==a.id)));if(S.pos)delete S.pos[a.id];save();renderDesk();renderDock()});
+ m.style.left=Math.min(e.clientX,innerWidth-190)+'px';m.style.top=Math.min(e.clientY,innerHeight-150)+'px';m.style.display='block'}
+// ---------- desktop icons (drag to move, snap to grid) ----------
+function renderDesk(){const desk=$('#desk');desk.innerHTML='';const D=S.dock||'bottom',ox=(D==='left'?76:0)+8,oy=(D==='top'?76:0)+8,
+ rows=Math.max(1,Math.floor((innerHeight-oy-90)/96)),cols=Math.max(1,Math.floor((innerWidth-ox-8)/88)),P=S.pos||(S.pos={}),apps=allApps(),used=new Set(),cell={},
+ cl=([c,r])=>[Math.max(0,Math.min(cols-1,c)),Math.max(0,Math.min(rows-1,r))],K=c=>c[0]+','+c[1];
+ apps.forEach(a=>{if(P[a.id]){cell[a.id]=cl(P[a.id]);used.add(K(cell[a.id]))}});
+ let n=0;apps.forEach(a=>{if(cell[a.id])return;let c;do{c=[Math.floor(n/rows),n%rows];n++}while(used.has(K(c))&&n<rows*cols+apps.length);cell[a.id]=c;used.add(K(c))});
+ apps.forEach(a=>{const d=el(`<div class="di"><i style="background:${a.i?'none':a.c}">${gl(a)}</i>${a.name}</div>`,desk);
+  const place=c=>{d.style.left=ox+c[0]*88+'px';d.style.top=oy+c[1]*96+'px'},sel=()=>{document.querySelectorAll('.di.sel').forEach(x=>x.classList.remove('sel'));d.classList.add('sel')};place(cell[a.id]);
+  d.onclick=e=>{e.stopPropagation();if(!d._m)sel()};d.ondblclick=()=>run(a);
+  d.oncontextmenu=e=>{e.preventDefault();e.stopPropagation();sel();appMenu(e,a)};
+  d.onmousedown=e=>{if(e.button)return;const sx=e.clientX,sy=e.clientY,l0=parseFloat(d.style.left),t0=parseFloat(d.style.top);let mv=0;
+   const m=v=>{if(!mv&&Math.abs(v.clientX-sx)+Math.abs(v.clientY-sy)<5)return;if(!mv){mv=1;d.style.transition='none';d.style.zIndex=5;sel()}d.style.left=l0+v.clientX-sx+'px';d.style.top=t0+v.clientY-sy+'px'};
+   const u=()=>{removeEventListener('mousemove',m);removeEventListener('mouseup',u);if(!mv)return;d._m=1;setTimeout(()=>d._m=0,0);
+    let tc=cl([Math.round((parseFloat(d.style.left)-ox)/88),Math.round((parseFloat(d.style.top)-oy)/96)]);
+    const occ=new Set(apps.filter(x=>x!==a).map(x=>K(cell[x.id])));
+    if(occ.has(K(tc))){let best=null,bd=1e9;for(let c=0;c<cols;c++)for(let r=0;r<rows;r++){if(occ.has(c+','+r))continue;const dd=(c-tc[0])**2+(r-tc[1])**2;if(dd<bd){bd=dd;best=[c,r]}}if(best)tc=best}
+    cell[a.id]=tc;P[a.id]=tc;save();d.style.transition='';d.style.zIndex='';place(tc)};
+   addEventListener('mousemove',m);addEventListener('mouseup',u)}});
+ renderLauncher()}
+renderDock();renderDesk();
+$('#launcher').onclick=e=>{if(e.target.id==='launcher')e.target.style.display='none'};
+// ---------- VS Code (editor + Live Server) ----------
+const TEXTEXT=['md','markdown','js','mjs','ts','tsx','jsx','css','scss','cs','json','txt','py','java','c','cpp','h','hpp','xml','yml','yaml','sh','lua','rs','go','php','rb','sql','csv','ini','cfg','log','shader','hlsl','glsl','gd','vue','svelte','toml'];
+const EDIT_RE=new RegExp('\\.('+[...TEXTEXT,'html','htm','bat','cmd'].join('|')+')$','i');
+async function openHtml(rel,name){let url;try{url=(S.ext||{}).live?(await fjos.liveStart(rel)).url:await fjos.fileUrl(rel)}catch(e){return alert('Could not open: '+e.message)}
+ launch({id:'html:'+rel,name:name||rel.split('/').pop(),g:'🌐',c:'#2d6cdf',kind:'web',url})}
+function openInCode(rel){const o=Object.values(open).find(o=>o.app==='code');if(o&&o.a._api){o.a._api.open(rel);focusApp(o.a)}else launch({...byId.code,open:rel})}
+function codeApp(body,a){
+ const EXT=[['live','Live Server','Serves your HTML on localhost with auto-reload on save. Needed by most HTML games (assets, fetch). Adds a Go Live button to .html files.'],['autosave','Auto Save','Saves a file 1 second after you stop typing.']];
+ body.innerHTML='<div class="cside"><div class="ch"><b>EXPLORER</b><span><button data-k="nf" title="New file">＋</button><button data-k="nd" title="New folder">▣</button><button data-k="ex" title="Extensions">⧉</button></span></div><div class="ctree"></div></div><div class="cmain"><div class="ctabs"></div><div class="cbar"></div><div class="cedit"><div class="gut"></div><textarea spellcheck="false" wrap="off" disabled></textarea></div><div class="cext" style="display:none"></div><div class="cstat"></div></div>';
+ const tree=$('.ctree',body),tabs=$('.ctabs',body),bar=$('.cbar',body),ta=$('textarea',body),gut=$('.gut',body),stat=$('.cstat',body),ed=$('.cedit',body),xp=$('.cext',body);
+ const T=[],ex=()=>S.ext||(S.ext={}),ops=new Set(['Documents']);let cur=null,tm,showX=false;
+ const nm=r=>r.split('/').pop(),par=r=>r.split('/').slice(0,-1).join('/');
+ const ctxm=(e,items)=>{const m=$('#menu');m.innerHTML='';items.forEach(([t,f])=>{el(`<div>${t}</div>`,m).onclick=()=>{m.style.display='none';f()}});m.style.left=e.clientX+'px';m.style.top=e.clientY+'px';m.style.display='block'};
+ const gutter=()=>{gut.textContent=Array.from({length:ta.value.split('\n').length},(_,i)=>i+1).join('\n')};
+ const status=()=>{stat.innerHTML=cur?`<span>${cur.rel}${cur.dirty?' ●':''}</span><span>Ln ${ta.value.slice(0,ta.selectionStart).split('\n').length} · ${nm(cur.rel).split('.').pop().toUpperCase()} · UTF-8</span>`:'<span>VS Code</span><span></span>'};
+ const paintTabs=()=>{tabs.innerHTML='';T.forEach(t=>{const d=el(`<div class="ctab ${t===cur?'on':''}"><span>${nm(t.rel)}${t.dirty?' ●':''}</span><b>✕</b></div>`,tabs);d.onclick=()=>{showX=false;cur&&(cur.text=ta.value);cur=t;paint()};$('b',d).onclick=e=>{e.stopPropagation();closeT(t)}})};
+ const paint=()=>{tabs.style.display=bar.style.display=ed.style.display=showX?'none':'';xp.style.display=showX?'block':'none';paintTabs();bar.innerHTML='';
+  if(cur){const h=/\.html?$/i.test(cur.rel);bar.innerHTML=`<span style="flex:1">${cur.rel}</span><button class="btn sv">Save</button>${h?`<button class="btn gl">${ex().live?'⚡ Go Live':'Open in browser'}</button>`:''}`;$('.sv',bar).onclick=()=>saveF(cur);const g=$('.gl',bar);if(g)g.onclick=async()=>{await saveF(cur);openHtml(cur.rel)}}
+  ta.disabled=!cur;ta.value=cur?cur.text:'';gutter();status();
+  if(showX){xp.innerHTML='<h3 style="margin-bottom:10px">Extensions</h3>';EXT.forEach(([id,n,d])=>{const r=el(`<div class="ex"><b>${n}</b><br><small>${d}</small><p></p><button class="btn">${ex()[id]?'Uninstall':'Install'}</button></div>`,xp);$('button',r).onclick=()=>{if(ex()[id]){delete ex()[id];if(id==='live')fjos.liveStop()}else ex()[id]=true;save();paint()}})}};
+ const saveF=async t=>{try{await fjos.write(t.rel,t.text);t.dirty=false;paintTabs();status()}catch(e){alert('Save failed: '+e.message)}};
+ const closeT=t=>{if(t.dirty&&!confirm('Discard unsaved changes to '+nm(t.rel)+'?'))return;T.splice(T.indexOf(t),1);if(cur===t)cur=T[T.length-1]||null;paint()};
+ const openF=async rel=>{showX=false;let t=T.find(x=>x.rel===rel);if(!t){let text;try{text=await fjos.read(rel)}catch(e){return alert('Cannot open '+nm(rel)+': '+e.message)}t={rel,text,dirty:false};T.push(t)}cur&&(cur.text=ta.value);cur=t;paint();renderTree()};
+ const newFile=async dir=>{const n=prompt('File name (for example script.js, style.css, notes.md, Program.cs)');if(!n)return;const rel=dir?dir+'/'+n:n;let items=[];try{items=await fjos.list(dir)}catch{}if(!items.some(x=>x.name===n))await fjos.write(rel,'');ops.add(dir);openF(rel)};
+ const renameF=async(rel,it)=>{const n=prompt('New name',it.name);if(!n||n===it.name)return;const nr=(par(rel)?par(rel)+'/':'')+n;await fjos.rename(rel,nr);T.forEach(t=>{if(t.rel===rel)t.rel=nr;else if(t.rel.startsWith(rel+'/'))t.rel=nr+t.rel.slice(rel.length)});paint();renderTree()};
+ const delF=async(rel,it)=>{if(!confirm('Delete '+it.name+'?'))return;await fjos.del(rel);for(let i=T.length-1;i>=0;i--)if(T[i].rel===rel||T[i].rel.startsWith(rel+'/')){if(cur===T[i])cur=null;T.splice(i,1)}cur=cur||T[T.length-1]||null;paint();renderTree()};
+ async function renderTree(){const box=document.createElement('div');
+  const walk=async(p,d)=>{let items=[];try{items=await fjos.list(p)}catch{}
+   for(const it of items){const rel=p?p+'/'+it.name:it.name;const r=el(`<div class="ct ${cur&&cur.rel===rel?'on':''}" style="padding-left:${8+d*14}px">${it.dir?(ops.has(rel)?'▾':'▸'):'&nbsp;&nbsp;'} ${it.dir?'📁':'📄'} ${it.name}</div>`,box);
+    r.onclick=()=>{if(it.dir){ops.has(rel)?ops.delete(rel):ops.add(rel);renderTree()}else openF(rel)};
+    r.oncontextmenu=e=>{e.preventDefault();e.stopPropagation();ctxm(e,[...(it.dir?[['New file here',()=>newFile(rel)]]:[]),['Rename',()=>renameF(rel,it)],['Delete',()=>delF(rel,it)]])};
+    if(it.dir&&ops.has(rel))await walk(rel,d+1)}};
+  await walk('',0);tree.replaceChildren(...box.childNodes)}
+ ta.onkeydown=e=>{if(e.key==='Tab'){e.preventDefault();ta.setRangeText('  ',ta.selectionStart,ta.selectionEnd,'end');ta.oninput()}else if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='s'){e.preventDefault();cur&&saveF(cur)}};
+ ta.oninput=()=>{if(!cur)return;cur.text=ta.value;if(!cur.dirty){cur.dirty=true;paintTabs()}gutter();status();if(ex().autosave){clearTimeout(tm);const t=cur;tm=setTimeout(()=>saveF(t),1000)}};
+ ta.onscroll=()=>gut.scrollTop=ta.scrollTop;ta.onkeyup=ta.onclick=status;
+ const K={nf:()=>newFile(cur?par(cur.rel):'Documents'),nd:async()=>{const n=prompt('Folder name');if(!n)return;const d=cur?par(cur.rel):'Documents';await fjos.mkdir(d?d+'/'+n:n);ops.add(d);renderTree()},ex:()=>{showX=!showX;paint()}};
+ body.querySelectorAll('[data-k]').forEach(b=>b.onclick=K[b.dataset.k]);
+ a._api={open:openF};renderTree();paint();if(a.open)openF(a.open);
+}
+// ---------- terminal ----------
+function termApp(body){
+ body.classList.add('col');body.innerHTML='<div class="term"><div class="out"></div><div class="ln"><span>fjos&gt;</span><input spellcheck="false"></div></div>';
+ const out=$('.out',body),inp=$('input',body),hist=[];let hi=0;
+ const say=(t,c)=>{const d=el('<div></div>',out);d.textContent=t;if(c)d.style.color=c;out.scrollTop=out.scrollHeight};
+ const pick=n=>allApps().find(a=>a.name.toLowerCase()===n||a.id===n)||allApps().find(a=>a.name.toLowerCase().includes(n));
+ say('FJOS Terminal. Type /help for commands.');
+ const cmd=line=>{const m=line.trim().match(/^\/?(\S+)\s*(.*)$/);if(!m)return;const c=m[1].toLowerCase(),n=m[2].trim().replace(/^['"“‘]+|['"”’]+$/g,'').trim().toLowerCase();
+  if(c==='help')say("/help            show this list\ntask 'app'       open an app (task 'discord')\nkill 'app'       close a running app (kill 'discord')\ntasks            list running apps\napps             list all apps\nclear            clear the screen");
+  else if(c==='task'){const a=n&&pick(n);a?(run(a),say('Started '+a.name)):say(n?`No app named '${n}'. Type apps to see the list.`:"Usage: task 'appname'",'#ff7b7b')}
+  else if(c==='kill'){const hit=Object.values(open).filter(o=>{const t=$('.tt b',o.el).textContent.toLowerCase();return n&&(t===n||o.app===n||t.includes(n))});
+   hit.length?(hit.forEach(o=>$('.x',o.el).click()),say(`Killed ${hit.length} window${hit.length>1?'s':''} matching '${n}'`)):say(n?`'${n}' is not running.`:"Usage: kill 'appname'",'#ff7b7b')}
+  else if(c==='tasks'){const t=Object.values(open).map(o=>$('.tt b',o.el).textContent);say(t.length?t.join('\n'):'Nothing is running.')}
+  else if(c==='apps')say(allApps().map(a=>a.name).join('\n'));
+  else if(c==='clear')out.innerHTML='';
+  else say(`Unknown command '${c}'. Type /help`,'#ff7b7b')};
+ inp.onkeydown=e=>{if(e.key==='Enter'&&inp.value.trim()){say('fjos> '+inp.value,'#8d9ab3');hist.push(inp.value);hi=hist.length;cmd(inp.value);inp.value=''}
+  else if(e.key==='ArrowUp'&&hi>0){inp.value=hist[--hi];e.preventDefault()}else if(e.key==='ArrowDown'){inp.value=hi<hist.length-1?hist[++hi]:(hi=hist.length,'')}};
+ body.onclick=()=>inp.focus();setTimeout(()=>inp.focus(),50)}
+addEventListener('click',()=>document.querySelectorAll('.di.sel').forEach(x=>x.classList.remove('sel')));
+// ---------- dock magnify (hover near icons) ----------
+const magOff=()=>[...dock.children].forEach(c=>c.style.transform='');
+dock.onmouseleave=magOff;
+dock.onmousemove=e=>{const D=S.dock||'bottom',v=D==='left'||D==='right',dr=dock.getBoundingClientRect(),pos=v?e.clientY:e.clientX,
+ org={bottom:'50% 100%',top:'50% 0',left:'0 50%',right:'100% 50%'}[D],ch=[...dock.children];
+ const sc=ch.map(c=>{if(c.tagName!=='BUTTON')return 1;const m=(v?dr.top+c.offsetTop:dr.left+c.offsetLeft)+22,d=pos-m;return 1+.75*Math.exp(-d*d/(2*55*55))});
+ const ex=sc.map(s=>42*(s-1)),E=ex.reduce((a,b)=>a+b,0);let acc=0;
+ ch.forEach((c,i)=>{const sh=acc+ex[i]/2-E/2;acc+=ex[i];c.style.transformOrigin=org;c.style.transform=`${v?'translateY':'translateX'}(${sh}px) scale(${sc[i]})`})};
+// ---------- genie (suck / unsuck) animation ----------
+function genie(w,id,mode,done){
+ const tg=dock.querySelector(`[data-id="${id}"]`)||dock,ir=tg.getBoundingClientRect(),r=w.getBoundingClientRect(),D=S.dock||'bottom',v=D==='left'||D==='right',
+  ix=ir.left+ir.width/2,iy=ir.top+ir.height/2,iv=Math.max(-.2,Math.min(1.2,v?(iy-r.top)/r.height:(ix-r.left)/r.width)),
+  N=24,dur=480,t0=performance.now(),op=mode==='open',ease=x=>x<.5?2*x*x:1-Math.pow(-2*x+2,2)/2,
+  map=(t,u)=>{const[x,y]={bottom:[u,t],top:[u,1-t],left:[1-t,u],right:[t,u]}[D];return`${x*100}% ${y*100}%`};
+ w.style.transformOrigin=`${ix-r.left}px ${iy-r.top}px`;w.style.pointerEvents='none';
+ const clear=()=>{['transform','clipPath','opacity','pointerEvents','transformOrigin'].forEach(k=>w.style[k]='')};
+ (function f(now){const p=Math.min(1,(now-t0)/dur),q=ease(op?1-p:p),n1=Math.min(1,q*1.7),A=[],B=[];
+  for(let i=0;i<=N;i++){const t=i/N,n=n1*t*t;A.push(map(t,n*(iv-.03)));B.unshift(map(t,1-n*(1-(iv+.03))))}
+  w.style.clipPath=`polygon(${A.concat(B).join(',')})`;w.style.transform=`scale(${1-.96*q})`;w.style.opacity=q>.9?1-(q-.9)*10:1;
+  if(p<1)requestAnimationFrame(f);else{done&&done();clear()}})(t0);
+}
+function mark(a){document.querySelectorAll('#dock [data-id]').forEach(b=>b.classList.toggle('open',!!Object.keys(open).find(k=>open[k].app===b.dataset.id)))}
+function launch(a){
+ const ex=Object.values(open).find(o=>o.app===a.id&&a.kind!=='files');if(ex){const hid=ex.el.style.display==='none';ex.el.style.display='';ex.el.style.zIndex=++z;if(hid)genie(ex.el,a.id,'open');return}
+ const w=el(`<div class="win ${a.kind==='files'||a.kind==='settings'||a.kind==='term'?'small':''}" style="z-index:${++z}"><div class="tt"><b>${a.name}</b><button class="mi">—</button><button class="m">▢</button><button class="x">✕</button></div><div class="body"></div></div>`,document.body);
+ const key=a.id+Math.random();open[key]={app:a.id,el:w,a};renderDock();
+ w.onmousedown=()=>w.style.zIndex=++z;
+ const tt=$('.tt',w);
+ tt.onmousedown=e=>{if(e.target.tagName==='BUTTON')return;const r=w.getBoundingClientRect(),ox=e.clientX-r.left,oy=e.clientY-r.top;
+  w.style.width=r.width+'px';w.style.height=r.height+'px';
+  const mv=v=>{w.style.left=v.clientX-ox+'px';w.style.top=Math.max(0,v.clientY-oy)+'px'};
+  const up=()=>{removeEventListener('mousemove',mv);removeEventListener('mouseup',up);cover(false)};cover(true);addEventListener('mousemove',mv);addEventListener('mouseup',up)};
+ $('.mi',w).onclick=()=>genie(w,a.id,'min',()=>w.style.display='none');
+ $('.m',w).onclick=tt.ondblclick=()=>{w.classList.toggle('small');w.style.cssText=`z-index:${++z}`};
+ $('.x',w).onclick=()=>{a.onClose&&a.onClose();delete open[key];mark();genie(w,a.id,'close',()=>{w.remove();renderDock()})};
+ const body=$('.body',w);
+ ({browser:browserApp,web:webApp,files:filesApp,settings:settingsApp,dos:dosApp,term:termApp,code:codeApp,roblox:robloxApp,steam:steamApp})[a.kind](body,a);genie(w,a.id,'open');
+}
+const cover=on=>document.querySelectorAll('webview').forEach(w=>w.style.pointerEvents=on?'none':'');
+async function steamApp(body,a){
+ body.classList.add('col');
+ const st=await fjos.steamStatus();
+ const esc=s=>s.replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+ body.innerHTML=`<div class="tool"><b style="padding:0 8px">Steam</b><span style="color:var(--dim);flex:1">${st.dir?'Installed on this PC':'Not installed on this PC'}</span>${st.dir?'<input id="sf" placeholder="Search your games" style="max-width:240px"><button id="sl">Launch Steam</button>':'<button id="sg">Get Steam</button>'}<button id="ss">Store</button></div><div class="files"><div class="grid" id="sgr"></div></div>`;
+ const grid=$('#sgr',body);
+ const web=(name,url)=>launch({id:'steam-'+name,name:'Steam '+name,g:'S',c:'#1b2838',kind:'web',url});
+ const draw=q=>{const g=st.games.filter(x=>x.name.toLowerCase().includes(q));
+  grid.innerHTML=g.length?'':`<div class="empty" style="grid-column:1/-1">${st.dir?(st.games.length?'No games match your search.':'No installed Steam games found. Install some from the Store.'):'Steam is not installed yet. Click Get Steam, download the installer, then run it from Files > Downloads (Run on my PC).'}</div>`;
+  g.forEach(x=>{const c=el(`<div style="background:var(--pan2);border:1px solid var(--line);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:10px"><b style="line-height:1.3">${esc(x.name)}</b><button class="btn">Play</button></div>`,grid);$('button',c).onclick=()=>fjos.steamPlay(x.id)})};
+ draw('');
+ if(st.dir){$('#sf',body).oninput=e=>draw(e.target.value.toLowerCase());$('#sl',body).onclick=()=>fjos.steamLaunch()}
+ else $('#sg',body).onclick=()=>web('Download','https://store.steampowered.com/about/');
+ $('#ss',body).onclick=()=>web('Store','https://store.steampowered.com');
+}
+async function robloxApp(body,a){
+ body.classList.add('col');
+ const st=await fjos.robloxStatus();
+ const msg=st.store?'The Roblox app is installed on this PC.':st.player?'Roblox Player is installed on this PC.':'Roblox is not installed on this PC yet.';
+ body.innerHTML=`<div class="empty" style="margin:auto;max-width:480px"><h2>Roblox</h2><p>${msg}</p><p style="color:var(--dim)">Roblox is a native Windows game, so it runs in its own window outside FJOS. This launcher installs and starts the real one.</p><div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap">${st.store?'<button class="btn" id="rl">Launch Roblox app</button>':''}${st.player?'<button class="btn" id="rw">Pick a game (roblox.com)</button>':''}<button class="btn" id="ri">${st.player||st.store?'Reinstall Roblox Player':'Install Roblox Player'}</button></div><p id="rs"></p></div>`;
+ const s=t=>$('#rs',body).textContent=t;
+ if(st.store)$('#rl',body).onclick=async()=>s(await fjos.robloxLaunch()==='ok'?'Launching Roblox...':'Roblox app not found.');
+ if(st.player)$('#rw',body).onclick=()=>webApp(body,{url:'https://www.roblox.com/home'});
+ $('#ri',body).onclick=async()=>{const r=await fjos.robloxInstall();s(r==='started'?'Installer started. Finish it, then reopen this window.':r==='missing'?'installers/RobloxPlayerInstaller.exe is missing.':'')};
+}
+function webApp(b,a){b.innerHTML=`<iframe allow="fullscreen; autoplay; clipboard-write; gamepad" style="flex:1;border:0;background:#fff" src="${px(a.url)}"></iframe>`}
+// ---------- browser ----------
+function browserApp(body){
+ body.classList.add('col');
+ body.innerHTML=`<div class="tabs"></div><div class="tool"><button data-k="b">←</button><button data-k="f">→</button><button data-k="r">⟳</button><input placeholder="Search or type a web address"></div><div class="pages"></div>`;
+ const tabs=$('.tabs',body),pages=$('.pages',body),inp=$('input',body);let cur=null;
+ const addBtn=el('<button class="add">+</button>',tabs);
+ const links=[['YouTube','▶','#e62117','https://www.youtube.com'],['Bing','b','#0a7fd4','https://www.bing.com'],['DuckDuckGo','🦆','#de5833','https://duckduckgo.com'],['Google','G','#4285f4','https://www.google.com'],['Claude','✻','#c96442','https://claude.ai'],['ChatGPT','◎','#10a37f','https://chatgpt.com'],['Reddit','R','#ff4500','https://www.reddit.com']];
+ function show(t){cur=t;[...tabs.querySelectorAll('.tab')].forEach(x=>x.classList.toggle('on',x===t.tab));[...pages.children].forEach(p=>p.style.display=(p===t.home&&!t.wv)||p===t.wv?(p===t.wv?'':'flex'):'none');
+  inp.value=t.wv?(t.url||''):'';if(!t.wv)t.home.style.display='flex'}
+ function go(t,url){t.url=url;if(!t.wv){t.wv=el(`<iframe allow="fullscreen; autoplay; clipboard-write; gamepad" style="flex:1;border:0;background:#fff"></iframe>`,pages);t.home.style.display='none';
+  window.addEventListener('message',e=>{if(e.source!==t.wv.contentWindow||!e.data||!e.data.fjosNav)return;t.url=e.data.url;if(e.data.title)$('span',t.tab).textContent=e.data.title;if(cur===t)inp.value=e.data.url})}
+ t.wv.src=px(url);show(t)}
+ function newTab(){const t={};
+  t.home=el(`<div class="home"><h1 class="hc"></h1><div class="sb"><input placeholder="Search with ${S.engine}"></div><div class="links"></div></div>`,pages);
+  const tick=()=>$('.hc',t.home).textContent=new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit',hour12:!S.h24});tick();setInterval(tick,20000);
+  $('.sb input',t.home).onkeydown=e=>{if(e.key==='Enter'&&e.target.value.trim())go(t,toUrl(e.target.value))};
+  links.forEach(([n,g,c,u])=>{const l=el(`<div class="lk"><i style="background:${c}">${g}</i>${n}</div>`,$('.links',t.home));l.onclick=()=>go(t,u)});
+  t.tab=el(`<div class="tab"><span>New Tab</span><b>✕</b></div>`);tabs.insertBefore(t.tab,addBtn);
+  t.tab.onclick=()=>show(t);
+  $('b',t.tab).onclick=e=>{e.stopPropagation();t.home.remove();t.wv&&t.wv.remove();t.tab.remove();const r=tabs.querySelectorAll('.tab');if(cur===t&&r.length)r[r.length-1].click()};
+  show(t)}
+ addBtn.onclick=newTab;
+ inp.onkeydown=e=>{if(e.key==='Enter'&&inp.value.trim()&&cur)go(cur,toUrl(inp.value))};
+ const acts={b:()=>cur.wv&&cur.wv.contentWindow.history.back(),f:()=>cur.wv&&cur.wv.contentWindow.history.forward(),r:()=>cur.wv&&cur.wv.contentWindow.location.reload()};
+ body.querySelectorAll('[data-k]').forEach(b=>b.onclick=()=>acts[b.dataset.k]());
+ newTab();
+}
+// ---------- settings app ----------
+function settingsApp(body){
+ body.innerHTML=`<div class="side"></div><div class="set"></div>`;const side=$('.side',body),set=$('.set',body);
+ const pages={
+  Preferences(){set.innerHTML=`<h2>Preferences</h2><div class="row2"><span>Default search engine</span><select class="btn" id="e">${Object.keys(ENGINES).map(e=>`<option ${e===S.engine?'selected':''}>${e}</option>`)}</select></div><div class="row2"><span>Taskbar position</span><select class="btn" id="dk">${['Bottom','Top','Left','Right'].map(x=>`<option ${x.toLowerCase()===(S.dock||'bottom')?'selected':''}>${x}</option>`).join('')}</select></div><div class="row2"><span>24-hour clock</span><input type="checkbox" id="h" ${S.h24?'checked':''}></div>`;
+   $('#dk',set).onchange=e=>{S.dock=e.target.value.toLowerCase();save();magOff();apply();renderDesk()};$('#e',set).onchange=e=>{S.engine=e.target.value;save()};$('#h',set).onchange=e=>{S.h24=e.target.checked;save()}},
+  Proxy(){set.innerHTML=`<h2>Proxy</h2><p>Route the OS browser and apps through a proxy. Examples: <code>http://host:8080</code> or <code>socks5://host:1080</code>. Leave empty for a direct connection.</p><input class="field" id="p" value="${S.proxy}" placeholder="Direct connection"><p></p><button class="btn" id="a">Apply proxy</button> <button class="btn" id="d">Go direct</button><p id="s"></p>`;
+   const ap=async v=>{S.proxy=v;save();await fjos.setProxy(v);$('#s',set).textContent=v?'Using '+v:'Using a direct connection.';$('#p',set).value=v};
+   $('#a',set).onclick=()=>ap($('#p',set).value.trim());$('#d',set).onclick=()=>ap('')},
+  Themes(){set.innerHTML=`<h2>Themes</h2><div class="grid"></div>`;const g=$('.grid',set);
+   THEMES.forEach(t=>{const c=(l)=>`hsl(${t.h} ${t.s}% ${l}%)`;
+    const d=el(`<div class="card ${t.n===S.theme?'on':''}" style="background:hsl(${t.h} 24% 13%)"><div class="h" style="background:hsl(${t.h} ${t.s}% 40% / .55)">${t.n}</div><div class="r"><div style="background:hsl(${t.h} 22% 19%)"></div><div style="background:${c(40)}"></div><div style="background:${c(56)}"></div></div><div class="d"><span style="background:${c(50)};box-shadow:0 0 9px ${c(50)}"></span><span style="background:${c(65)};box-shadow:0 0 9px ${c(65)}"></span><span style="background:#fff"></span></div></div>`,g);
+    d.onclick=()=>{S.theme=t.n;save();apply();pages.Themes()}})},
+  Background(){set.innerHTML=`<h2>Background</h2><div class="grid"></div><p></p><button class="btn" id="u">Use my own image</button> <button class="btn" id="v">Use a video (mp4/webm)</button>`;const g=$('.grid',set);
+   Object.keys(WALLS).forEach(n=>{const w=el(`<div class="wall ${S.wall===n?'on':''}" style="background-image:url('${WALLS[n]}')">${n}</div>`,g);w.onclick=()=>{S.wall=n;save();apply();pages.Background()}});
+   $('#u',set).onclick=async()=>{const u=await fjos.wallImport('image');if(u){S.custom=u;S.wall='Custom';save();apply();pages.Background()}};$('#v',set).onclick=async()=>{const u=await fjos.wallImport('video');if(u){S.video=u;S.wall='Video';save();apply();pages.Background()}}},
+  Data(){set.innerHTML=`<h2>Data</h2><div class="row2"><span>Clear logins, cookies and site data</span><button class="btn" id="c">Clear</button></div><div class="row2"><span>Reset all settings</span><button class="btn" id="r">Reset</button></div>`;
+   $('#c',set).onclick=async()=>{await fjos.clearData();alert('Site data cleared.')};$('#r',set).onclick=()=>{if(confirm('Reset theme, background and preferences?')){localStorage.removeItem('fjos.s');location.reload()}}},
+  About(){set.innerHTML=`<h2>About</h2><p>FJOS 1.0 by FJ Studios.<br>Your files live in the OS drive folder inside this app's data directory.</p>`}};
+ Object.keys(pages).forEach(n=>{const b=el(`<button>${n}</button>`,side);b.onclick=()=>{side.querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b));pages[n]()}});
+ side.firstChild.click();
+}
+// ---------- run programs inside the OS (DOS emulator) ----------
+const DOSEXT=['exe','com','bat','jsdos','zip'];
+function needScript(src,tag){return new Promise((ok,no)=>{if(document.querySelector(`[data-l="${src}"]`))return ok();const e=document.createElement(tag);e.dataset.l=src;
+ if(tag==='link'){e.rel='stylesheet';e.href=src}else e.src=src;e.onload=ok;e.onerror=()=>no(new Error('Missing '+src+'. Run npm install first.'));document.head.append(e)})}
+async function openFile(rel,name){
+ const ext=name.split('.').pop().toLowerCase();
+ if(/^html?$/.test(ext))return openHtml(rel,name);if(TEXTEXT.includes(ext))return openInCode(rel);
+ if(!DOSEXT.includes(ext))return fjos.open(rel);
+ let res;try{res=await fjos.dosBundle(rel)}catch(e){return alert('Could not prepare '+name+': '+e.message)}
+ if(!res.ok&&res.reason==='windows')return fjos.open(rel);
+ launch({id:'dos'+Math.random(),name,g:'▶',kind:'dos',rel,res});
+}
+function dosApp(body,a){
+ body.classList.add('col');
+ if(!a.res.ok){body.innerHTML=`<div class="empty" style="margin:auto">Running ${a.name} on your PC...</div>`;fjos.open(a.rel);setTimeout(()=>{const x=body.closest('.win');x&&$('.x',x).click()},400);return}
+ body.innerHTML='<div class="dosroot" style="flex:1;min-height:0"></div>';
+ const root=$('.dosroot',body),base='node_modules/js-dos/dist/';
+ Promise.all([needScript(base+'js-dos.css','link'),needScript(base+'js-dos.js','script')]).then(()=>{
+  const url=URL.createObjectURL(new Blob([a.res.data]));
+  const props=Dos(root,{url,pathPrefix:base+'emulators/',autoStart:true,theme:'dark'});
+  a.onClose=()=>{try{props.stop()}catch{}URL.revokeObjectURL(url)}
+ }).catch(e=>{body.innerHTML=`<div class="empty" style="margin:auto">${e.message}</div>`});
+}
+// ---------- files ----------
+function filesApp(body,a){
+ body.classList.add('col');let path=a.path||'';
+ body.innerHTML=`<div class="tool"><button data-k="up">↑</button><input readonly class="p"><button data-k="if">Install files</button><button data-k="id">Install folder</button><button data-k="nfile">New file</button><button data-k="nf">New folder</button></div><div class="files"></div>`;
+ const list=$('.files',body),join=n=>path?path+'/'+n:n;
+ async function render(){$('.p',body).value='FJOS:/'+path;const items=await fjos.list(path);
+  list.innerHTML=items.length?'':`<div class="empty">This folder is empty.<br>Use <b>Install files</b> to add an .exe, setup, or game, or <b>Install folder</b> to add a whole folder.</div>`;
+  for(const it of items){const ext=it.name.split('.').pop().toLowerCase(),ic=it.dir?'📁':['exe','bat','cmd','msi'].includes(ext)?'▶':'📄';
+   const sz=it.dir?'':it.size>=1048576?(it.size/1048576).toFixed(1)+' MB':Math.ceil(it.size/1024)+' KB';
+   const r=el(`<div class="row"><i>${ic}</i><span>${it.name}</span><small>${sz}</small></div>`,list);
+   r.onclick=()=>{list.querySelectorAll('.sel').forEach(x=>x.classList.remove('sel'));r.classList.add('sel')};
+   r.ondblclick=()=>it.dir?(path=join(it.name),render()):openFile(join(it.name),it.name);
+   r.oncontextmenu=e=>{e.preventDefault();r.click();ctx(e,it)}}}
+ function ctx(e,it){const m=$('#menu');m.innerHTML='';
+  [[it.dir?'Open':'Run in FJOS',()=>it.dir?(path=join(it.name),render()):openFile(join(it.name),it.name)],...(it.dir?[]:[['Run on my PC',()=>fjos.open(join(it.name))]]),...(!it.dir&&['exe','bat','cmd','msi','lnk'].includes(it.name.split('.').pop().toLowerCase())?[['Add to desktop',()=>{const rel=join(it.name);if(!SC().some(x=>x.rel===rel)){SC().push({name:it.name.replace(/\.[^.]+$/,''),rel});save();renderDesk()}}]]:[]),...(!it.dir&&EDIT_RE.test(it.name)?[['Edit in VS Code',()=>openInCode(join(it.name))]]:[]),...(!it.dir&&/\.html?$/i.test(it.name)?[['Open in browser',()=>openHtml(join(it.name),it.name)]]:[]),['Show on my PC',()=>fjos.reveal(join(it.name))],
+   ...['Games','Programs'].map(f=>['Move to '+f,async()=>{await fjos.rename(join(it.name),f+'/'+it.name);render()}]),['Rename',async()=>{const n=prompt('New name',it.name);if(n){await fjos.rename(join(it.name),join(n));render()}}],
+   ['Delete',async()=>{if(confirm('Delete '+it.name+'?')){await fjos.del(join(it.name));render()}}]].forEach(([t,f])=>{const d=el(`<div>${t}</div>`,m);d.onclick=()=>{m.style.display='none';f()}});
+  m.style.left=e.clientX+'px';m.style.top=e.clientY+'px';m.style.display='block'}
+ const acts={up:()=>{path=path.split('/').slice(0,-1).join('/');render()},if:async()=>{await fjos.import(path,'files');render()},id:async()=>{await fjos.import(path,'folder');render()},nfile:async()=>{const n=prompt('File name (for example script.js, style.css, notes.md, Program.cs)');if(n){let it=[];try{it=await fjos.list(path)}catch{}if(!it.some(x=>x.name===n))await fjos.write(join(n),'');render();openInCode(join(n))}},nf:async()=>{const n=prompt('Folder name');if(n){await fjos.mkdir(join(n));render()}}};
+ body.querySelectorAll('[data-k]').forEach(b=>b.onclick=()=>acts[b.dataset.k]());render();
+}
+addEventListener('click',()=>$('#menu').style.display='none');
+fjos.onDownload(d=>{document.querySelectorAll('#toast').forEach(x=>x.remove());
+ const t=el(`<div id="toast">${d.state==='completed'?'Downloaded '+d.name+'. Click to open Downloads.':'Download failed: '+d.name}</div>`,document.body);
+ t.onclick=()=>{t.remove();launch({...byId.files,path:'Downloads'})};setTimeout(()=>t.remove(),8000)});
+</script></body></html>
